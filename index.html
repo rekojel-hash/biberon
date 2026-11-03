@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Biberons</title>
+<meta name="theme-color" content="#4f7cff">
+<meta name="description" content="Suivi des biberons d'un nourrisson (millilitres de lait)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f4f6fb; --card:#ffffff; --text:#1d2433; --muted:#6b7488; --line:#e3e7f0;
+  --primary:#4f7cff; --primary-d:#3a62d8; --ok:#2faa72; --warn:#e8913a; --danger:#d9534f;
+  --bar:#9db8ff; --bar-today:#4f7cff; --shadow:0 2px 10px rgba(30,40,70,.08);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#10141d; --card:#1a2030; --text:#e9edf6; --muted:#97a1b8; --line:#2a3248;
+    --primary:#6c92ff; --primary-d:#8aa8ff; --bar:#3a4f8a; --bar-today:#6c92ff; --shadow:none}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{padding-bottom:calc(150px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:5;background:var(--primary);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 12px}
+header h1{margin:0;font-size:1.15rem;font-weight:650}
+header .sub{font-size:.85rem;opacity:.92;margin-top:2px}
+main{max-width:640px;margin:0 auto;padding:12px}
+.view{display:none}.view.active{display:block}
+.card{background:var(--card);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card h2{margin:0 0 8px;font-size:1rem}
+.muted{color:var(--muted)}.small{font-size:.85rem}
+.daynav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.daynav button{width:44px;height:44px;border-radius:50%;border:0;background:var(--card);color:var(--text);font-size:1.3rem;box-shadow:var(--shadow)}
+.daynav button:disabled{opacity:.35}
+.daynav .label{font-weight:600;text-align:center}
+.summary{display:flex;gap:14px;align-items:center}
+.ring{position:relative;width:132px;height:132px;flex:none}
+.ring svg{transform:rotate(-90deg)}
+.ring .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .big{font-size:1.8rem;font-weight:700;line-height:1}
+.ring .unit{font-size:.8rem;color:var(--muted)}
+.stats{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:var(--bg);border-radius:12px;padding:8px 10px}
+.stat b{display:block;font-size:1.05rem}
+.stat span{font-size:.75rem;color:var(--muted)}
+.since{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:var(--bg);margin-top:12px;font-size:.95rem}
+.quick{display:flex;gap:8px;flex-wrap:wrap}
+.quick button{flex:1 0 56px;padding:12px 6px;border-radius:12px;border:1.5px solid var(--primary);background:transparent;color:var(--primary);font-weight:650;font-size:1rem}
+.quick button:active{background:var(--primary);color:#fff}
+.entry{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.entry:last-child{border-bottom:0}
+.entry .ico{font-size:1.5rem;width:36px;text-align:center}
+.entry .main{flex:1;min-width:0}
+.entry .ml{font-weight:700;font-size:1.1rem}
+.entry .meta{font-size:.82rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.entry .time{font-weight:600}
+.empty{text-align:center;padding:22px 8px;color:var(--muted)}
+.fab{position:fixed;right:18px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:6;width:62px;height:62px;border-radius:50%;border:0;background:var(--primary);color:#fff;font-size:2rem;box-shadow:0 4px 14px rgba(0,0,0,.28)}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:transparent;color:var(--muted);padding:9px 4px 8px;font-size:.72rem}
+nav button .i{display:block;font-size:1.35rem}
+nav button.active{color:var(--primary);font-weight:650}
+dialog{border:0;border-radius:20px;padding:0;width:min(94vw,440px);background:var(--card);color:var(--text);box-shadow:0 10px 40px rgba(0,0,0,.4)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+.sheet{padding:16px}
+.sheet h3{margin:0 0 12px}
+label.f{display:block;font-size:.82rem;color:var(--muted);margin:12px 0 4px}
+input[type=number],input[type=text],input[type=datetime-local]{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--text);font-size:1rem}
+input:focus{outline:2px solid var(--primary);border-color:transparent}
+.mlrow{display:flex;gap:8px;align-items:center}
+.mlrow button{width:52px;height:52px;border-radius:14px;border:0;background:var(--bg);color:var(--text);font-size:1.4rem;flex:none}
+.mlrow input{text-align:center;font-size:1.7rem;font-weight:700;padding:8px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chips button{padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:.9rem}
+.seg{display:flex;gap:6px}
+.seg label{flex:1;text-align:center;border:1.5px solid var(--line);border-radius:12px;padding:9px 4px;font-size:.85rem;cursor:pointer;background:var(--bg)}
+.seg input{display:none}
+.seg input:checked+span{font-weight:700}
+.seg label:has(input:checked){border-color:var(--primary);background:color-mix(in srgb,var(--primary) 14%,transparent)}
+.actions{display:flex;gap:8px;margin-top:16px}
+.btn{flex:1;padding:13px;border-radius:12px;border:0;font-size:1rem;font-weight:650;background:var(--bg);color:var(--text)}
+.btn.primary{background:var(--primary);color:#fff}
+.btn.danger{background:transparent;color:var(--danger);border:1.5px solid var(--danger)}
+.btn.block{display:block;width:100%;margin-top:8px}
+.range{display:flex;gap:6px;margin-bottom:10px}
+.range button{flex:1;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+.range button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:10px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.hint{background:color-mix(in srgb,var(--warn) 14%,transparent);border-radius:12px;padding:10px 12px;font-size:.88rem;margin-top:8px}
+ul.tips{padding-left:18px;margin:6px 0}ul.tips li{margin:5px 0}
+#toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#222;color:#fff;padding:11px 16px;border-radius:12px;z-index:20;display:none;align-items:center;gap:14px;max-width:92vw;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+#toast button{background:none;border:0;color:#9db8ff;font-weight:700;font-size:.95rem}
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="hTitle">🍼 Biberons</h1>
+  <div class="sub" id="hSub"></div>
+</header>
+
+<main>
+  <!-- AUJOURD'HUI -->
+  <section class="view active" id="v-today">
+    <div class="daynav">
+      <button id="prevDay" aria-label="Jour précédent">‹</button>
+      <div class="label" id="dayLabel"></div>
+      <button id="nextDay" aria-label="Jour suivant">›</button>
+    </div>
+
+    <div class="card">
+      <div class="summary">
+        <div class="ring">
+          <svg width="132" height="132" viewBox="0 0 132 132">
+            <circle cx="66" cy="66" r="56" fill="none" stroke="var(--line)" stroke-width="12"/>
+            <circle id="ringFg" cx="66" cy="66" r="56" fill="none" stroke="var(--primary)" stroke-width="12" stroke-linecap="round" stroke-dasharray="351.86" stroke-dashoffset="351.86"/>
+          </svg>
+          <div class="mid"><span class="big" id="totalMl">0</span><span class="unit">ml</span></div>
+        </div>
+        <div class="stats">
+          <div class="stat"><b id="sCount">0</b><span>biberons</span></div>
+          <div class="stat"><b id="sAvg">–</b><span>moyenne / prise</span></div>
+          <div class="stat"><b id="sGoal">–</b><span>objectif indicatif</span></div>
+          <div class="stat"><b id="sInterval">–</b><span>intervalle moyen</span></div>
+        </div>
+      </div>
+      <div class="since" id="sinceBox" style="display:none"><span>⏱️</span><span id="sinceTxt"></span></div>
+    </div>
+
+    <div class="card" id="quickCard">
+      <h2>Ajout rapide</h2>
+      <div class="quick" id="quick"></div>
+      <div class="small muted" style="margin-top:8px">Enregistre à l'heure actuelle. Utilisez le bouton + pour une quantité ou une heure précise.</div>
+    </div>
+
+    <div class="card">
+      <h2>Prises de la journée</h2>
+      <div id="list"></div>
+    </div>
+  </section>
+
+  <!-- HISTORIQUE -->
+  <section class="view" id="v-history">
+    <div class="card">
+      <h2>Total par jour</h2>
+      <div class="range" id="range">
+        <button data-d="7" class="active">7 jours</button>
+        <button data-d="14">14 jours</button>
+        <button data-d="30">30 jours</button>
+      </div>
+      <div id="chart"></div>
+      <div class="small muted" id="chartNote"></div>
+    </div>
+    <div class="card">
+      <h2>Détail par jour</h2>
+      <div id="histList"></div>
+    </div>
+  </section>
+
+  <!-- RÉGLAGES -->
+  <section class="view" id="v-settings">
+    <div class="card">
+      <h2>Le bébé</h2>
+      <label class="f" for="setName">Prénom</label>
+      <input type="text" id="setName" placeholder="Prénom du bébé" autocomplete="off">
+      <label class="f" for="setWeight">Poids actuel (kg)</label>
+      <input type="number" id="setWeight" inputmode="decimal" step="0.01" min="0" placeholder="ex. 4.2">
+      <label class="f" for="setGoal">Objectif quotidien (ml) — laissez vide pour le calcul indicatif</label>
+      <input type="number" id="setGoal" inputmode="numeric" step="10" min="0" placeholder="auto">
+      <div class="hint" id="goalHint"></div>
+      <label class="f">Type de lait par défaut</label>
+      <div class="seg" id="setTypeSeg"></div>
+      <label class="f" for="setStep">Pas du + / − (ml)</label>
+      <input type="number" id="setStep" inputmode="numeric" min="1" max="100" value="10">
+    </div>
+
+    <div class="card">
+      <h2>Mes données</h2>
+      <div class="small muted">Tout reste enregistré sur ce téléphone (aucun serveur). Pensez à exporter une sauvegarde de temps en temps.</div>
+      <button class="btn block" id="btnJson">⬇️ Sauvegarde complète (JSON)</button>
+      <button class="btn block" id="btnCsv">⬇️ Export tableur (CSV)</button>
+      <button class="btn block" id="btnImport">⬆️ Importer une sauvegarde</button>
+      <input type="file" id="fileImport" accept="application/json,.json" hidden>
+      <button class="btn danger block" id="btnReset">🗑️ Tout effacer</button>
+    </div>
+
+    <div class="card" id="installCard">
+      <h2>Installer sur le téléphone</h2>
+      <button class="btn primary block" id="btnInstall" style="display:none">📲 Installer l'application</button>
+      <div class="small muted" style="margin-top:8px">Sinon, dans Chrome : menu ⋮ → « Installer l'application » ou « Ajouter à l'écran d'accueil ».</div>
+    </div>
+
+    <div class="card">
+      <h2>Repères généraux</h2>
+      <ul class="tips small">
+        <li>Les besoins varient beaucoup d'un enfant à l'autre. Un repère souvent cité pour le nourrisson est d'environ <b>150 ml/kg/jour</b> (de l'ordre de 120 à 180 selon l'âge), à adapter avec l'avis de votre pédiatre.</li>
+        <li>Suivez surtout les signes de faim et de satiété, les couches mouillées et la courbe de croissance.</li>
+        <li>Allaitement au sein : seule la quantité de lait <i>tiré</i> au biberon peut être mesurée ici.</li>
+        <li>Un biberon entamé ne se garde pas : jetez les restes après la tétée (environ 1 h).</li>
+      </ul>
+      <div class="hint small"><b>Consultez rapidement</b> en cas de refus répété de boire, de vomissements importants, de très peu de couches mouillées, de fièvre (surtout avant 3 mois), de somnolence inhabituelle ou de perte de poids. Cette application est un simple carnet de notes et ne remplace pas un avis médical.</div>
+    </div>
+    <div class="small muted" style="text-align:center;margin-bottom:12px">Biberons v1.0</div>
+  </section>
+</main>
+
+<button class="fab" id="fab" aria-label="Ajouter un biberon">+</button>
+
+<nav>
+  <button data-v="today" class="active"><span class="i">🍼</span>Aujourd'hui</button>
+  <button data-v="history"><span class="i">📊</span>Historique</button>
+  <button data-v="settings"><span class="i">⚙️</span>Réglages</button>
+</nav>
+
+<div id="toast"><span id="toastTxt"></span><button id="toastBtn" style="display:none">Annuler</button></div>
+
+<dialog id="dlg">
+  <form class="sheet" method="dialog" id="form">
+    <h3 id="dlgTitle">Nouveau biberon</h3>
+    <label class="f" for="fMl">Quantité (ml)</label>
+    <div class="mlrow">
+      <button type="button" id="mMinus" aria-label="Moins">−</button>
+      <input type="number" id="fMl" inputmode="numeric" min="1" max="1000" step="1" required>
+      <button type="button" id="mPlus" aria-label="Plus">+</button>
+    </div>
+    <div class="chips" id="chips"></div>
+    <label class="f">Type de lait</label>
+    <div class="seg" id="fTypeSeg"></div>
+    <label class="f" for="fTime">Date et heure</label>
+    <input type="datetime-local" id="fTime" required>
+    <label class="f" for="fNote">Note (facultatif)</label>
+    <input type="text" id="fNote" placeholder="ex. régurgitation, a bien bu, 1er biberon de nuit…" maxlength="200" autocomplete="off">
+    <div class="actions">
+      <button type="button" class="btn danger" id="fDelete" style="display:none">Supprimer</button>
+      <button type="button" class="btn" id="fCancel">Annuler</button>
+      <button type="submit" class="btn primary">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const LS = 'biberons.v1';
+const TYPES = {
+  infantile: {label: 'Lait infantile', ico: '🍼'},
+  maternel:  {label: 'Lait maternel',  ico: '🤱'},
+  mixte:     {label: 'Mixte',          ico: '🥛'}
+};
+const PRESETS = [30, 60, 90, 120, 150, 180, 210];
+const QUICK = [60, 90, 120, 150, 180];
+const DEFAULTS = {name:'', weight:'', goal:'', defaultType:'infantile', step:10};
+
+let state = load();
+let viewOffset = 0;      // 0 = aujourd'hui, -1 = hier…
+let histDays = 7;
+let editingId = null;
+let undoFn = null, toastTimer = null;
+
+/* ---------- stockage ---------- */
+function load(){
+  try {
+    const d = JSON.parse(localStorage.getItem(LS));
+    if (d && Array.isArray(d.entries)) return {entries: d.entries, settings: Object.assign({}, DEFAULTS, d.settings || {})};
+  } catch(e){}
+  return {entries: [], settings: Object.assign({}, DEFAULTS)};
+}
+function save(){
+  try { localStorage.setItem(LS, JSON.stringify(state)); }
+  catch(e){ toast('⚠️ Enregistrement impossible (stockage plein ou bloqué)'); }
+}
+
+/* ---------- utilitaires dates ---------- */
+const pad = n => String(n).padStart(2, '0');
+const dayKey = ms => { const d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); };
+const startOfDay = ms => { const d = new Date(ms); d.setHours(0,0,0,0); return d.getTime(); };
+const addDays = (ms, n) => { const d = new Date(ms); d.setDate(d.getDate() + n); return d.getTime(); };
+const fmtTime = ms => new Date(ms).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+const toLocalInput = ms => { const d = new Date(ms); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes()); };
+const fmtDur = min => { min = Math.max(0, Math.round(min)); const h = Math.floor(min/60), m = min % 60; return h ? (h + ' h ' + pad(m)) : (m + ' min'); };
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const fmtDayLong = ms => cap(new Date(ms).toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'}));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- objectif ---------- */
+function goalMl(){
+  const s = state.settings;
+  const manual = parseFloat(s.goal);
+  if (manual > 0) return {value: Math.round(manual), auto: false};
+  const w = parseFloat(String(s.weight).replace(',', '.'));
+  if (w > 0) return {value: Math.round(w * 150 / 10) * 10, auto: true};
+  return {value: 0, auto: true};
+}
+
+/* ---------- agrégats ---------- */
+function entriesOfDay(key){
+  return state.entries.filter(e => dayKey(e.t) === key).sort((a,b) => b.t - a.t);
+}
+function totalsByDay(){
+  const m = {};
+  state.entries.forEach(e => {
+    const k = dayKey(e.t);
+    (m[k] = m[k] || {total:0, count:0}).total += e.ml;
+    m[k].count++;
+  });
+  return m;
+}
+
+/* ---------- rendu : aujourd'hui ---------- */
+function renderToday(){
+  const base = addDays(startOfDay(Date.now()), viewOffset);
+  const key = dayKey(base);
+  const list = entriesOfDay(key);
+  const total = list.reduce((a,e) => a + e.ml, 0);
+  const g = goalMl();
+
+  $('#dayLabel').textContent = viewOffset === 0 ? "Aujourd'hui — " + fmtDayLong(base)
+    : viewOffset === -1 ? 'Hier — ' + fmtDayLong(base) : fmtDayLong(base);
+  $('#nextDay').disabled = viewOffset >= 0;
+  $('#quickCard').style.display = viewOffset === 0 ? '' : 'none';
+
+  $('#totalMl').textContent = total;
+  $('#sCount').textContent = list.length;
+  $('#sAvg').textContent = list.length ? Math.round(total / list.length) + ' ml' : '–';
+  $('#sGoal').textContent = g.value ? g.value + ' ml' : '–';
+
+  const asc = [...list].sort((a,b) => a.t - b.t);
+  if (asc.length > 1) {
+    const span = (asc[asc.length-1].t - asc[0].t) / 60000 / (asc.length - 1);
+    $('#sInterval').textContent = fmtDur(span);
+  } else $('#sInterval').textContent = '–';
+
+  const C = 2 * Math.PI * 56;
+  const ratio = g.value ? Math.min(total / g.value, 1) : 0;
+  const fg = $('#ringFg');
+  fg.style.strokeDashoffset = C * (1 - ratio);
+  fg.style.stroke = (g.value && total >= g.value) ? 'var(--ok)' : 'var(--primary)';
+
+  const el = $('#list');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty">Aucun biberon enregistré ce jour-là.<br>Appuyez sur <b>+</b> pour en ajouter un.</div>';
+  } else {
+    el.innerHTML = list.map(e => {
+      const t = TYPES[e.type] || TYPES.infantile;
+      return '<div class="entry" data-id="' + e.id + '">' +
+        '<div class="ico">' + t.ico + '</div>' +
+        '<div class="main"><div class="ml">' + e.ml + ' ml</div>' +
+        '<div class="meta">' + esc(t.label) + (e.note ? ' · ' + esc(e.note) : '') + '</div></div>' +
+        '<div class="time">' + fmtTime(e.t) + '</div></div>';
+    }).join('');
+  }
+  updateSince();
+  updateHeader();
+}
+
+function updateSince(){
+  const box = $('#sinceBox');
+  if (viewOffset !== 0 || !state.entries.length) { box.style.display = 'none'; return; }
+  const last = Math.max(...state.entries.map(e => e.t));
+  const min = (Date.now() - last) / 60000;
+  if (min < 0) { box.style.display = 'none'; return; }
+  box.style.display = 'flex';
+  $('#sinceTxt').innerHTML = 'Dernier biberon il y a <b>' + fmtDur(min) + '</b> (' + fmtTime(last) + ')';
+}
+function updateHeader(){
+  const n = state.settings.name.trim();
+  $('#hTitle').textContent = '🍼 ' + (n ? 'Biberons de ' + n : 'Biberons');
+  const w = parseFloat(String(state.settings.weight).replace(',', '.'));
+  $('#hSub').textContent = w > 0 ? 'Poids : ' + w.toString().replace('.', ',') + ' kg' : '';
+}
+
+/* ---------- rendu : historique ---------- */
+function renderHistory(){
+  const totals = totalsByDay();
+  const today = startOfDay(Date.now());
+  const days = [];
+  for (let i = histDays - 1; i >= 0; i--) {
+    const ms = addDays(today, -i);
+    const k = dayKey(ms);
+    days.push({ms, k, total: (totals[k] || {}).total || 0, count: (totals[k] || {}).count || 0});
+  }
+  const g = goalMl();
+  const max = Math.max(g.value, ...days.map(d => d.total), 100);
+  const W = 340, H = 170, padL = 4, padB = 22, padT = 14;
+  const bw = (W - padL) / days.length;
+  const ch = H - padB - padT;
+  let svg = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Total de lait par jour">';
+  if (g.value) {
+    const y = padT + ch * (1 - g.value / max);
+    svg += '<line x1="0" x2="' + W + '" y1="' + y + '" y2="' + y + '" stroke="var(--ok)" stroke-width="1" stroke-dasharray="4 3"/>';
+    svg += '<text x="' + (W - 2) + '" y="' + (y - 3) + '" text-anchor="end">objectif ' + g.value + '</text>';
+  }
+  days.forEach((d, i) => {
+    const h = ch * d.total / max;
+    const x = padL + i * bw + bw * 0.15;
+    const w = bw * 0.7;
+    const isToday = d.ms === today;
+    svg += '<rect x="' + x + '" y="' + (padT + ch - h) + '" width="' + w + '" height="' + Math.max(h, 0) + '" rx="3" fill="' + (isToday ? 'var(--bar-today)' : 'var(--bar)') + '"/>';
+    if (histDays <= 14 && d.total) svg += '<text x="' + (x + w/2) + '" y="' + (padT + ch - h - 3) + '" text-anchor="middle">' + d.total + '</text>';
+    const lbl = histDays <= 7 ? new Date(d.ms).toLocaleDateString('fr-FR', {weekday:'short'}).replace('.', '')
+      : (i % (histDays > 14 ? 5 : 2) === 0 ? new Date(d.ms).getDate() + '/' + (new Date(d.ms).getMonth() + 1) : '');
+    svg += '<text x="' + (x + w/2) + '" y="' + (H - 6) + '" text-anchor="middle">' + lbl + '</text>';
+  });
+  svg += '</svg>';
+  $('#chart').innerHTML = svg;
+
+  const filled = days.filter(d => d.count);
+  const avg = filled.length ? Math.round(filled.reduce((a,d) => a + d.total, 0) / filled.length) : 0;
+  $('#chartNote').textContent = filled.length ? 'Moyenne sur les jours renseignés : ' + avg + ' ml/jour' : 'Pas encore de données sur cette période.';
+
+  const rows = [...days].reverse().filter(d => d.count).map(d =>
+    '<div class="row" data-goto="' + d.k + '"><div><b>' + fmtDayLong(d.ms) + '</b><div class="small muted">' + d.count + ' biberon' + (d.count > 1 ? 's' : '') + ' · moy. ' + Math.round(d.total / d.count) + ' ml</div></div><div><b>' + d.total + ' ml</b></div></div>'
+  );
+  $('#histList').innerHTML = rows.length ? rows.join('') : '<div class="empty">Rien à afficher.</div>';
+}
+
+/* ---------- rendu : réglages ---------- */
+function renderSettings(){
+  const s = state.settings;
+  $('#setName').value = s.name;
+  $('#setWeight').value = s.weight;
+  $('#setGoal').value = s.goal;
+  $('#setStep').value = s.step;
+  buildTypeSeg('#setTypeSeg', 'setType', s.defaultType);
+  updateGoalHint();
+}
+function updateGoalHint(){
+  const w = parseFloat(String($('#setWeight').value).replace(',', '.'));
+  const hint = $('#goalHint');
+  if (w > 0) {
+    const a = Math.round(w * 150 / 10) * 10, lo = Math.round(w * 120 / 10) * 10, hi = Math.round(w * 180 / 10) * 10;
+    hint.innerHTML = 'Repère indicatif pour ' + String(w).replace('.', ',') + ' kg : environ <b>' + a + ' ml/jour</b> (fourchette ' + lo + '–' + hi + ' ml). À valider avec votre pédiatre.';
+  } else hint.textContent = 'Renseignez le poids pour obtenir un repère indicatif (≈150 ml/kg/jour), ou saisissez directement votre objectif.';
+}
+function buildTypeSeg(sel, name, current){
+  $(sel).innerHTML = Object.entries(TYPES).map(([k, t]) =>
+    '<label><input type="radio" name="' + name + '" value="' + k + '"' + (k === current ? ' checked' : '') + '><span>' + t.ico + '<br>' + t.label + '</span></label>'
+  ).join('');
+}
+
+/* ---------- navigation ---------- */
+function showView(v){
+  $$('.view').forEach(x => x.classList.toggle('active', x.id === 'v-' + v));
+  $$('nav button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+  $('#fab').style.display = v === 'settings' ? 'none' : '';
+  if (v === 'today') renderToday();
+  if (v === 'history') renderHistory();
+  if (v === 'settings') renderSettings();
+  window.scrollTo(0, 0);
+}
+$$('nav button').forEach(b => b.addEventListener('click', () => showView(b.dataset.v)));
+$('#prevDay').addEventListener('click', () => { viewOffset--; renderToday(); });
+$('#nextDay').addEventListener('click', () => { if (viewOffset < 0) { viewOffset++; renderToday(); } });
+$('#range').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  histDays = +b.dataset.d;
+  $$('#range button').forEach(x => x.classList.toggle('active', x === b));
+  renderHistory();
+});
+$('#histList').addEventListener('click', e => {
+  const r = e.target.closest('[data-goto]'); if (!r) return;
+  const target = new Date(r.dataset.goto + 'T00:00:00').getTime();
+  viewOffset = Math.round((target - startOfDay(Date.now())) / 86400000);
+  showView('today');
+});
+
+/* ---------- toast / annuler ---------- */
+function toast(msg, undo){
+  $('#toastTxt').textContent = msg;
+  undoFn = undo || null;
+  $('#toastBtn').style.display = undo ? '' : 'none';
+  $('#toast').style.display = 'flex';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, undo ? 6000 : 3000);
+}
+function hideToast(){ $('#toast').style.display = 'none'; undoFn = null; }
+$('#toastBtn').addEventListener('click', () => { if (undoFn) undoFn(); hideToast(); });
+
+/* ---------- ajout rapide ---------- */
+$('#quick').innerHTML = QUICK.map(v => '<button data-ml="' + v + '">' + v + '</button>').join('');
+$('#quick').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const entry = {id: uid(), t: Date.now(), ml: +b.dataset.ml, type: state.settings.defaultType, note: ''};
+  state.entries.push(entry); save(); renderToday();
+  if (navigator.vibrate) navigator.vibrate(30);
+  toast(entry.ml + ' ml enregistrés', () => { state.entries = state.entries.filter(x => x.id !== entry.id); save(); renderToday(); });
+});
+
+/* ---------- formulaire ---------- */
+const dlg = $('#dlg');
+$('#chips').innerHTML = PRESETS.map(v => '<button type="button" data-ml="' + v + '">' + v + '</button>').join('');
+$('#chips').addEventListener('click', e => { const b = e.target.closest('button'); if (b) $('#fMl').value = b.dataset.ml; });
+const stepVal = () => Math.max(1, parseInt(state.settings.step) || 10);
+$('#mMinus').addEventListener('click', () => { $('#fMl').value = Math.max(1, (+$('#fMl').value || 0) - stepVal()); });
+$('#mPlus').addEventListener('click', () => { $('#fMl').value = Math.min(1000, (+$('#fMl').value || 0) + stepVal()); });
+
+function openForm(id){
+  editingId = id || null;
+  const e = id ? state.entries.find(x => x.id === id) : null;
+  $('#dlgTitle').textContent = e ? 'Modifier le biberon' : 'Nouveau biberon';
+  $('#fDelete').style.display = e ? '' : 'none';
+  $('#fMl').value = e ? e.ml : '';
+  buildTypeSeg('#fTypeSeg', 'fType', e ? e.type : state.settings.defaultType);
+  let t = Date.now();
+  if (e) t = e.t;
+  else if (viewOffset < 0) { const d = new Date(addDays(startOfDay(Date.now()), viewOffset)); const n = new Date(); d.setHours(n.getHours(), n.getMinutes()); t = d.getTime(); }
+  $('#fTime').value = toLocalInput(t);
+  $('#fTime').max = toLocalInput(Date.now() + 60000);
+  $('#fNote').value = e ? (e.note || '') : '';
+  dlg.showModal();
+  if (!e) setTimeout(() => $('#fMl').focus(), 50);
+}
+$('#fab').addEventListener('click', () => openForm());
+$('#list').addEventListener('click', e => { const r = e.target.closest('.entry'); if (r) openForm(r.dataset.id); });
+$('#fCancel').addEventListener('click', () => dlg.close());
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+
+$('#form').addEventListener('submit', ev => {
+  ev.preventDefault();
+  const ml = Math.round(+$('#fMl').value);
+  const t = new Date($('#fTime').value).getTime();
+  if (!(ml > 0 && ml <= 1000)) { toast('Quantité invalide (1 à 1000 ml)'); return; }
+  if (isNaN(t)) { toast('Date invalide'); return; }
+  const type = (document.querySelector('input[name=fType]:checked') || {}).value || 'infantile';
+  const note = $('#fNote').value.trim();
+  if (editingId) {
+    const e = state.entries.find(x => x.id === editingId);
+    if (e) Object.assign(e, {ml, t, type, note});
+  } else {
+    state.entries.push({id: uid(), t, ml, type, note});
+  }
+  save();
+  dlg.close();
+  viewOffset = Math.min(0, Math.round((startOfDay(t) - startOfDay(Date.now())) / 86400000));
+  renderToday();
+  toast('Enregistré ✔');
+});
+$('#fDelete').addEventListener('click', () => {
+  const e = state.entries.find(x => x.id === editingId); if (!e) return;
+  state.entries = state.entries.filter(x => x.id !== editingId);
+  save(); dlg.close(); renderToday();
+  toast('Biberon supprimé', () => { state.entries.push(e); save(); renderToday(); });
+});
+
+/* ---------- réglages : saisie ---------- */
+function bindSetting(sel, key, transform){
+  $(sel).addEventListener('input', () => {
+    state.settings[key] = transform ? transform($(sel).value) : $(sel).value;
+    save(); updateGoalHint(); updateHeader();
+  });
+}
+bindSetting('#setName', 'name');
+bindSetting('#setWeight', 'weight');
+bindSetting('#setGoal', 'goal');
+bindSetting('#setStep', 'step', v => Math.min(100, Math.max(1, parseInt(v) || 10)));
+$('#setTypeSeg').addEventListener('change', e => { state.settings.defaultType = e.target.value; save(); });
+
+/* ---------- export / import ---------- */
+function download(name, mime, content){
+  const blob = new Blob([content], {type: mime});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+const stamp = () => dayKey(Date.now());
+$('#btnJson').addEventListener('click', () => {
+  download('biberons-sauvegarde-' + stamp() + '.json', 'application/json', JSON.stringify({app: 'biberons', version: 1, exported: new Date().toISOString(), ...state}, null, 2));
+});
+$('#btnCsv').addEventListener('click', () => {
+  const rows = [['Date', 'Heure', 'Millilitres', 'Type', 'Note']];
+  [...state.entries].sort((a,b) => a.t - b.t).forEach(e => {
+    const d = new Date(e.t);
+    rows.push([d.toLocaleDateString('fr-FR'), fmtTime(e.t), e.ml, (TYPES[e.type] || TYPES.infantile).label, e.note || '']);
+  });
+  const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+  download('biberons-' + stamp() + '.csv', 'text/csv;charset=utf-8', '\ufeff' + csv);
+});
+$('#btnImport').addEventListener('click', () => $('#fileImport').click());
+$('#fileImport').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (!d || !Array.isArray(d.entries)) throw 0;
+    const known = new Set(state.entries.map(x => x.id));
+    let added = 0;
+    d.entries.forEach(x => {
+      if (x && x.id && Number.isFinite(x.t) && Number.isFinite(x.ml) && !known.has(x.id)) {
+        state.entries.push({id: String(x.id), t: x.t, ml: x.ml, type: TYPES[x.type] ? x.type : 'infantile', note: String(x.note || '')});
+        added++;
+      }
+    });
+    save(); toast(added + ' prise(s) importée(s)');
+  } catch(err){ toast('Fichier non valide'); }
+  e.target.value = '';
+});
+$('#btnReset').addEventListener('click', () => {
+  if (!confirm('Effacer TOUTES les données de ce téléphone ? (pensez à exporter une sauvegarde avant)')) return;
+  state = {entries: [], settings: Object.assign({}, DEFAULTS)};
+  save(); renderSettings(); toast('Données effacées');
+});
+
+/* ---------- installation PWA ---------- */
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; $('#btnInstall').style.display = ''; });
+$('#btnInstall').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; $('#btnInstall').style.display = 'none';
+});
+window.addEventListener('appinstalled', () => { $('#installCard').style.display = 'none'; });
+if (window.matchMedia('(display-mode: standalone)').matches) $('#installCard').style.display = 'none';
+
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+
+/* ---------- démarrage ---------- */
+renderToday();
+setInterval(() => { if ($('#v-today').classList.contains('active')) updateSince(); }, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && $('#v-today').classList.contains('active')) renderToday(); });
+})();
+</script>
+</body>
+</html>
